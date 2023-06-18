@@ -1,13 +1,44 @@
 <script lang="ts">
 	import { Avatar } from '@skeletonlabs/skeleton';
 	import { goto } from '$app/navigation';
-	import { io_chat } from '$lib/webSocketConnection_chat';
+	import { socketStore } from '$lib/webSocketConnection_chat';
+	import type { Socket } from 'socket.io-client';
+	import { onDestroy, onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import { TabGroup, Tab } from '@skeletonlabs/skeleton';
 	import { each } from 'svelte/internal';
 	import ChatUserList from '../../../components/Chat/ChatUserList.svelte'
-	// import '$lib/interface.d'
-	import type { PayLoadIF, ChatUserIF } from '$lib/interface.d'
+	import type { PayLoadIF, ChatUserIF, ChatMsgIF } from '$lib/interface.d'
 
+	let socket: Socket;
+
+	const unsubscribe = socketStore.subscribe((_socket: Socket) => {
+		socket = _socket;
+	});
+
+	onMount(() => {
+		/* ===== chat-connect ===== */
+		socket.on('chat-connect', (data: PayLoadIF) => {
+			if (!data._check) console.log('PayLoad false');
+			// or popup 잘못된 접근입니다 확인 => goto (/main);
+		});
+		socket.emit('chat-connect', { _room: $page.params['chat_room'], _check: true });
+
+		/* ===== chat-msg-even ===== */
+		socket.on('chat-msg-event', (data: ChatMsgIF) => {
+			msg_list = [...msg_list, data];
+		});
+
+		/* ===== chat-msg-even ===== */
+	});
+
+	onDestroy(unsubscribe);
+
+	/* ================================================================================
+									chat msg
+	   ================================================================================ */
+
+	let msg_list: ChatMsgIF[] = [];
 	let data: PayLoadIF; // extern
 	// for profile
   // dummy data for test
@@ -66,41 +97,13 @@
 	// : ChatUserIF
 	let chat_data: ChatMsgIF = {
 		_msg: '',
-		_room_info: {
-			_room_name: '',
-			_room_password: '',
-			_participant_list: [],
-    		_banned_list: []
-			// _participant_list: 
-			// 소켓 통신을 위해 있다
-			// Data를 주고 받기 위한 구조체이다
-			// 따로 구조체를 만들어서 써야한다.
-		}
+		_user_name: '',
+		_room_name: $page.params['chat_room']
 	};
 
-
-	let msg_list: string[] = [];
-
-	function ft_error_goback() {
-		goto('/main');
-	}
-
-	io_chat.on('chat-connect', (data: PayLoadIF) => {
-		if (!data._check) console.log('PayLoad false');
-		chat_data._room_info._room_name = data._url;
-		// or popup 잘못된 접근입니다 확인 => goto (/main);
-	});
-
-	io_chat.on('chat-msg-event', (data: ChatMsgIF) => {
-		console.log('chat-msg-event', data._msg);
-		msg_list = [...msg_list, data._msg];
-	});
-
-	io_chat.emit('chat-connect', data);
-
 	function ft_chat_send_msg() {
-		// if (chat_data._msg) io_chat.emit('chat-msg-event', chat_data);
-		msg_list = [... msg_list, chat_data._msg]
+		if (chat_data._msg.length && chat_data._msg != '\n')
+			socket.emit('chat-msg-event', chat_data);
 		chat_data._msg = '';
 	}
 
@@ -110,12 +113,17 @@
 	}
 
 	function ft_exit_chat_room() {
-		io_chat.emit('chat-exit-room', chat_data);
+		socket.emit('chat-exit-room', chat_data);
+		goto('/main');
+	}
+
+	function ft_error_goback() {
 		goto('/main');
 	}
 
 	// ------------------
 
+	/*
 	let messageFeed = [
 		{
 			id: 0,
@@ -161,7 +169,7 @@
 	}
 
 	let tabSet: number = 0;
-
+ */
 </script>
 
 <!-- <section class="w-full max-h-[400px] p-4 overflow-y-auto space-y-4">
@@ -229,7 +237,7 @@
 			<button class="input-group-shim">+</button>
 			<textarea
 				bind:value={chat_data._msg}
-				on:keydown={ft_chat_send_msg_keydown}
+				on:keyup={ft_chat_send_msg_keydown}
 				class="bg-transparent border-0 ring-0"
 				name="prompt"
 				id="prompt"
@@ -238,8 +246,7 @@
 			/>
 			<button class="variant-filled-primary text_input_btn" on:click={ft_chat_send_msg}>Send</button>
 		</div>
-		<!--  -->
 	</div>
 </div>
-					
+
 <!-- <div bind:this={elemChat} class="overflow-y-auto">(chat)</div> -->
