@@ -1,7 +1,7 @@
 import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, SubscribeMessage, MessageBody, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket, Namespace } from 'socket.io';
-import { gameDataDto } from './gameDto/gameData.dto';
-import { Room } from './data/playerData'
+import { GamePlayerData, GameUpdateData, GameMoveData, GamePlayerScoreData, GameInvitation } from './dto/gameData.dto';
+import { GameRoom, GameClientOption } from './data/playerData';
 import { GameService } from './game.service';
 /* 
  * service : gateway에서 호출되어 게임 내부 로직 변경 (현재 게이트웨이에 있는 private 함수들)
@@ -13,23 +13,43 @@ import { GameService } from './game.service';
  */
 
 
+
 @WebSocketGateway({ namespace: '/game', cors: true })
-// implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
 
 	@WebSocketServer() server: Namespace;
 
 	private service: GameService;
-	public rooms: Room[];
-	private players: gameDataDto[];
+
+	// rooms : 2명의 클라이언트가 들어있는 게임 룸
+	public rooms = new Map<string, GameRoom>();
+
+	// refresh될 때 disconnect된 방을 찾기 위한 자료구조
+	// key 값이 socketId, value가 소속된 roomName
+	public roomKey = new Map<string, string>();
+
+	private gameUsers = new Map<string, Socket>();
+
+	private players: GamePlayerData[];
 
 	constructor() {
 		this.service = new GameService(this);
-		this.rooms = [];
+		this.rooms;
 		this.players = [];
 	}
-	// Canvas Info
 
+	@SubscribeMessage('mainConnect')
+	handleConnection(
+		@ConnectedSocket() client: Socket,
+	) {
+		const userid: string | string[] = client.handshake.query._userId;
+		console.log('\x1b[38;5;154m Connection: ', userid, " : ", client.id + "\x1b[0m");
+		if (typeof userid === 'string') {
+			if (!this.gameUsers.has(userid))
+				this.gameUsers.set(userid, client);
+		}
+		client.emit('gameSocketCreation',);
+	}
 
 	afterInit(server: Server) {
 		console.count('Init');
@@ -39,52 +59,187 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 	}
 
 	handleDisconnect(client: Socket) {
-		console.log('game disconnect');
-		//console.log('disconnect');
-		console.log(client.id);
+		const curPlayer: GamePlayerData = this.players.find(data => data.socketId === client.id);
+		if (curPlayer) {
+			const playerIndex: number = this.players.indexOf(curPlayer);
+			this.players.slice(playerIndex);
+		}
+		else {
+			const destroyedRoom: string = this.roomKey.get(client.id);
+			if (destroyedRoom) {
+				const room: GameRoom = this.rooms.get(destroyedRoom);
+				const gamePlayerScoreData: GamePlayerScoreData = new GamePlayerScoreData();
+
+				if (room.leftPlayer.isInGame === true) {
+					if (room.leftPlayer.socketId === client.id) {
+						// rightPlayer win
+						gamePlayerScoreData.player1Id = room.leftPlayer.userId;
+						gamePlayerScoreData.player1Score = 0;
+						gamePlayerScoreData.player2Id = room.rightPlayer.userId;
+						gamePlayerScoreData.player2Score = room.rightPlayer.gameScore;
+						// user한테 PETCH로 gamePlayerScoreData를 보내주면 된다
+						this.server.to(room.rightPlayer.socketId).emit('gotoMain', true);
+					}
+					else {
+						// leftPlayer Win
+						gamePlayerScoreData.player1Id = room.leftPlayer.userId;
+						gamePlayerScoreData.player1Score = room.leftPlayer.gameScore;
+						gamePlayerScoreData.player2Id = room.rightPlayer.userId;
+						gamePlayerScoreData.player2Score = 0;
+						// user한테 PETCH로 gamePlayerScoreData를 보내주면 된다
+						this.server.to(room.leftPlayer.socketId).emit('gotoMain', true);
+					}
+				}
+				else {
+					if (room.leftPlayer.socketId === client.id) {
+						this.server.to(room.rightPlayer.socketId).emit('gotoMain', true);
+					}
+					else {
+						this.server.to(room.leftPlayer.socketId).emit('gotoMain', true);
+					}
+				}
+				this.service.endGame(room);
+			}
+			// curPlayer도 없고, Room도 없으면 main인 상황
+		}
+		console.log('disconnect', client.id);
 	}
 
-
-	public findRoom(roomName: string): Room {
-		let room: Room = this.rooms.find((room: Room) =>
-			room.roomName === roomName);
+	public findRoom(roomName: string): GameRoom {
+		let room: GameRoom = this.rooms.get(roomName);
 		return room;
 	}
 
-	@SubscribeMessage('connect')
-	handleConnection(
-		@ConnectedSocket() client: Socket
-	) {
-
-		this.server.to(client.id).emit('handShaking', true);
+	public findGameUserSocket(gameUser: string): Socket {
+		let userSocket: Socket = this.gameUsers.get(gameUser);
+		return userSocket;
 	}
 
-	@SubscribeMessage('handShaking')
+	@SubscribeMessage('pushMatchList')
 	pushPlayer(
 		@ConnectedSocket() client: Socket,
-		@MessageBody() flag: boolean,
+		// @MessageBody() userId: string,
 	) {
-		if (flag) {
-			let player: gameDataDto = new gameDataDto();
-			this.service.initPlayer(player, client.id);
-			console.log(player);
-			this.server.to(client.id).emit('connected', player);
-			this.players.push(player);
-			if (this.players.length >= 2) {
-				console.log(this.players.length);
-				let room: Room = new Room();
-				room.leftPlayer = this.players.shift();
-				room.rightPlayer = this.players.shift();
-				room.roomName = room.leftPlayer.socketId;
-				room.leftPlayer.roomName = room.roomName;
-				room.rightPlayer.roomName = room.roomName;
-				this.rooms.push(room);
-				this.server.to(room.leftPlayer.socketId).emit('roomName', room.roomName);
-				this.server.to(room.rightPlayer.socketId).emit('roomName', room.roomName);
-			}
+		console.log(client.id);
+		console.log('is in?');
+		let player: GamePlayerData = new GamePlayerData();
+		player.updateData = new GameUpdateData();
+		player.updateData.moveData = new GameMoveData();
+
+		this.service.initPlayer(player, client);
+		this.players.push(player);
+
+		if (this.players.length >= 2) {
+			console.log(this.players.length);
+			let room: GameRoom = new GameRoom();
+
+			room.leftPlayer = this.players.shift();
+			room.rightPlayer = this.players.shift();
+			this.rooms.set(room.leftPlayer.socketId, room);
+
+			this.roomKey.set(room.leftPlayer.socketId, room.leftPlayer.socketId);
+			this.roomKey.set(room.rightPlayer.socketId, room.leftPlayer.socketId);
+
+			this.server.to(room.leftPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
+			this.server.to(room.rightPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
 		}
 	}
 
+	@SubscribeMessage('sendGameInvite')
+	sendGameInvite(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() opponentPlayer: string,
+	) {
+		let userSocket = this.findGameUserSocket(opponentPlayer);
+		if (userSocket) {
+			userSocket.emit('you got invite', userSocket.handshake.query.id);
+		}
+		else {
+			console.log('no such user')
+		}
+	}
+
+	private handleInvitation(player1: Socket, player2: Socket) {
+		let left: GamePlayerData = new GamePlayerData();
+		left.updateData = new GameUpdateData();
+		left.updateData.moveData = new GameMoveData();
+		this.service.initPlayer(left, player1);
+
+		let right: GamePlayerData = new GamePlayerData();
+		right.updateData = new GameUpdateData();
+		right.updateData.moveData = new GameMoveData();
+		this.service.initPlayer(right, player2);
+
+		let room: GameRoom = new GameRoom();
+		room.leftPlayer = left;
+		room.rightPlayer = right;
+		this.rooms.set(room.leftPlayer.socketId, room);
+
+		this.roomKey.set(room.leftPlayer.socketId, room.leftPlayer.socketId);
+		this.roomKey.set(room.rightPlayer.socketId, room.leftPlayer.socketId);
+
+		// roomName을 받으면 option창으로 redirect 되도록 채팅팀에 말할 것
+		this.server.to(room.leftPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
+		this.server.to(room.rightPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
+	}
+
+	@SubscribeMessage('inviteResponsse')
+	gameInviteResponse(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() gameInvitation: GameInvitation,
+	) {
+		let gameUser: Socket = this.findGameUserSocket(gameInvitation.opponentPlayer);
+		if (gameInvitation.acceptFlag) {
+			this.handleInvitation(client, gameUser);
+		}
+		else {
+			gameUser.emit('Invite Denied');
+		}
+	}
+
+	@SubscribeMessage('optionPageArrived')
+	handleOptionPageStart(
+		@ConnectedSocket() client: Socket,
+	) {
+		let gameRoom: string = this.roomKey.get(client.id);
+		if (!gameRoom) {
+			this.server.to(client.id).emit('gotoMain', true);
+		}
+	}
+
+	@SubscribeMessage('optionReady')
+	handleOptionReady(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() gameClientOption: GameClientOption,
+	) {
+		let room = this.findRoom(gameClientOption._roomName);
+		if (room) {
+			this.service.setOption(room, gameClientOption);
+			this.service.optionReady(room, client.id);
+		}
+		else {
+			this.server.to(client.id).emit('gotoMain', true);
+		}
+	}
+
+	@SubscribeMessage('inGamePageArrived')
+	handleGotoInGameHandler(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() RoomName: string,
+	) {
+		let room = this.findRoom(RoomName);
+		if (room) {
+			if (RoomName === client.id) {
+				this.server.to(client.id).emit('gameDraw', room.leftPlayer);
+			}
+			else {
+				this.server.to(client.id).emit('gameDraw', room.rightPlayer);
+			}
+		}
+		else {
+			this.server.to(client.id).emit('gotoMain', true);
+		}
+	}
 
 	// Enter Key pressed : game ready
 	@SubscribeMessage('gameReady')
@@ -92,7 +247,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		@ConnectedSocket() client: Socket,
 		@MessageBody() roomName: string,
 	) {
-		console.log(roomName);
 		let room = this.findRoom(roomName);
 		if (room) {
 			this.service.getReady(room, client.id);
@@ -129,17 +283,26 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		}
 	}
 
-
-	@SubscribeMessage('leftTest')
+	@SubscribeMessage('gameRestart')
 	waitTester(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() roomName: string,
 	) {
-		console.log(roomName);
+
 		let room = this.findRoom(roomName);
 		if (room) {
-			console.log(room.endTimer);
-			clearTimeout(room.endTimer);
+			if (client.id === room.leftPlayer.socketId) {
+				room.leftReady = true;
+			}
+			else {
+				room.rightReady = true;
+			}
+			if (room.leftReady && room.rightReady) {
+				clearTimeout(room.endTimer);
+				this.server.to(room.leftPlayer.socketId).emit('restart', true);
+				this.server.to(room.rightPlayer.socketId).emit('restart', true);
+				this.service.getReady(room, client.id);
+			}
 		}
 	}
 }

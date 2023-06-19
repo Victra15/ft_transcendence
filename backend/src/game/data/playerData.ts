@@ -1,12 +1,23 @@
-import { gameDataDto } from "../gameDto/gameData.dto";
+import { GamePlayerData } from "../dto/gameData.dto";
 
-export class Room {
-    isEnd: boolean;
+export class GameRoom {
     endTimer: any;
     dataFrame: any;
-    roomName: string;
-    leftPlayer: gameDataDto;
-    rightPlayer: gameDataDto;
+
+    leftPlayer: GamePlayerData;
+    rightPlayer: GamePlayerData;
+
+    isEnd: boolean;
     leftReady: boolean;
     rightReady: boolean;
+}
+
+export class GameClientOption {
+	_roomName: string;
+
+	_canvasColor: string;
+
+	// Ball Location
+	_ballRadius: number;
+	_gameScore: number;
 }

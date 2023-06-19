@@ -1,0 +1,198 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { afterUpdate } from 'svelte';
+	import { onDestroy } from 'svelte';
+	import type { Socket } from 'socket.io-client';
+	import { CreateGameSocket, gameSocketStore } from '$lib/webSocketConnection_game';
+	import { gameClientOption } from '$lib/gameData';
+	import { goto } from '$app/navigation';
+
+	let io_game: Socket;
+
+	const unsubscribe = gameSocketStore.subscribe((_socket: Socket) => {
+		io_game = _socket;
+	});
+
+
+	let cnt: number = 0;
+
+	let canvas: HTMLCanvasElement;
+	let context: any;
+
+	// Paddle
+	let leftPaddleX: number;
+	let rightPaddleX: number;
+
+	let paddleWidth: number;
+	let paddleHeight: number;
+
+	// score
+	let scoreTextSize: number;
+	let scoreMargin: number;
+
+	let score1X: number;
+	let score2X: number;
+	let scoreY: number;
+
+	let leftScore: number;
+	let rightScore: number;
+
+	let	rdyFlag: boolean = false;
+
+	function resizeCanvas() {
+		if (window.innerWidth <= 1200 || window.innerHeight <= 600)
+		{
+			cnt = -10;
+			alert('👆👆👆👆👆👆 멈춰 👆👆👆👆👆👆👆👆👆');
+		}
+	}
+
+	function setEndGame(flag: boolean) {
+		if (flag) {
+			context.globalAlpha = 1;
+			context.font = `${scoreTextSize * 2}px Arial`;
+			context.fillStyle = 'while';
+			context.textAlign = 'center';
+			context.fillText('You win', canvas.width / 2, canvas.height / 2);
+		} else {
+			context.globalAlpha = 1;
+			context.font = `${scoreTextSize * 2}px Arial`;
+			context.fillStyle = 'white';
+			context.textAlign = 'center';
+			context.fillText('You lose', canvas.width / 2, canvas.height / 2);
+		}
+	}
+
+	function initPlayer(Player: any) {
+		console.log(Player);
+		canvas.width = Player.canvasWidth;
+		canvas.height = Player.canvasHeight;
+		canvas.style.backgroundColor = Player.canvasColor;
+
+		gameClientOption._ballRadius = Player.ballRadius;
+
+		paddleWidth = Player.paddleWidth;
+		paddleHeight = Player.paddleHeight;
+
+		scoreTextSize = canvas.height * 0.3;
+		scoreMargin = canvas.width * 0.2;
+
+		leftPaddleX = Player.leftPaddleX;
+		rightPaddleX = Player.rightPaddleX;
+
+		score1X = canvas.width / 2 - scoreMargin;
+		score2X = canvas.width / 2 + scoreMargin;
+		scoreY = canvas.height / 2 + (scoreTextSize * 3) / 8;
+
+		leftScore = Player.updateData.leftScore;
+		rightScore = Player.updateData.rightScore;
+	}
+
+	function draw(moveData: any) {
+		console.log(moveData);
+		context.clearRect(0, 0, canvas.width, canvas.height);
+		context.beginPath();
+		context.arc(
+			moveData.ballX,
+			moveData.ballY,
+			gameClientOption._ballRadius,
+			0,
+			Math.PI * 2,
+			false
+		);
+		context.fillStyle = 'white';
+		context.fill();
+		context.closePath();
+
+		context.globalAlpha = 0.5;
+		context.font = `${scoreTextSize}px Arial`;
+		context.fillStyle = 'white';
+		context.textAlign = 'center';
+		context.fillText(leftScore, score1X, scoreY);
+
+		context.fillText(rightScore, score2X, scoreY);
+
+		context.globalAlpha = 1;
+
+		context.fillStyle = 'white';
+		context.fillRect(leftPaddleX, moveData.leftPaddleY, paddleWidth, paddleHeight);
+
+		context.fillStyle = 'white';
+		context.fillRect(rightPaddleX, moveData.rightPaddleY, paddleWidth, paddleHeight);
+	}
+
+	function handleKeyPress(event: any) {
+		if (event.key === 'Enter') {
+			cnt++;
+			console.log('enter press');
+			if (cnt < 0) {
+			} else if (cnt === 1 && rdyFlag === false) {
+				rdyFlag = true;
+				io_game.emit('gameReady', gameClientOption._roomName);
+			}
+		} else if (event.key === 'ArrowDown') {
+			io_game.emit('downKey', gameClientOption._roomName);
+		} else if (event.key === 'ArrowUp') {
+			io_game.emit('upKey', gameClientOption._roomName);
+		} else if (event.key === 'Esc') {
+			io_game.emit('gameRestart', gameClientOption._roomName);
+		}
+	}
+
+	onMount(() => {
+		canvas = document.createElement('canvas');
+		context = canvas.getContext('2d');
+
+		document.body.appendChild(canvas);
+
+		window.addEventListener('resize', resizeCanvas);
+		window.addEventListener('keydown', handleKeyPress);
+
+		io_game.emit('inGamePageArrived', gameClientOption._roomName);
+
+		io_game.on('gotoMain', (flag: boolean) => {
+			if (flag) goto('/main');
+		});
+
+		io_game.on('gameDraw', (Player: any) => {
+			initPlayer(Player);
+			draw(Player.updateData.moveData);
+		});
+
+		io_game.on('restart', (flag: boolean) => {
+			if (flag) {
+				leftScore = 0;
+				rightScore = 0;
+			}
+		});
+
+		io_game.on('ballMove', (player: any) => {
+			draw(player);
+		});
+
+		io_game.on('oneSetEnd', (player: any) => {
+			leftScore = player.leftScore;
+			rightScore = player.rightScore;
+			draw(player.moveData);
+		});
+
+		io_game.on('gameEnd', (flag: boolean) => {
+			console.log('end game:', flag ? 'true' : 'false');
+			setEndGame(flag);
+		});
+	});
+
+	onDestroy(() => {
+		io_game.disconnect();
+		document.body.removeChild(canvas);
+		window.removeEventListener('keydown', handleKeyPress);
+		unsubscribe();
+	});
+
+	// afterUpdate(() => {
+	// 	// Code to handle updates or re-renders, if needed
+	// });
+</script>
+
+<!-- <canvas id=“myCanvas” width={width} height={height}></canvas> -->
+<!-- 위와 같이 한다고 함 되는지는 모름 -->
