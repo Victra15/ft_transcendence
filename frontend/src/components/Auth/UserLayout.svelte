@@ -3,11 +3,13 @@
   import { authToken } from '../../service/store';
   import '../../service/userDTO';
   import '../../service/friendDTO';
+  import type { ChatUserIF }  from '$lib/interface';
 
   export let userInfo: UserDTO ;
   export let friendList: friendDTO[];
+  export let chatUserList: ChatUserIF[];
 
-  //friendsList 컴포넌트
+  //friendsList component
   import FriendsList from '../Profile/FriendsList.svelte';
 
   //css
@@ -19,6 +21,9 @@
 
   // tab
   import { TabGroup, Tab } from '@skeletonlabs/skeleton';
+
+  //DM component
+  import DmList from '../Chat/DmList.svelte';
 
 const logout = () => {
   authToken.logout()
@@ -66,10 +71,25 @@ let tabSet: number = 0;
           {#each friendList as friend}
             <FriendsList friend={friend} userInfo={userInfo} />
           {/each}
-      </dl>
+        </dl>
       {/each}
     {:else if tabSet === 1}
-      <!-- (tab panel 2 contents) -->
+      <div>
+        <div class="overflow-y-scroll">
+          <dl class="list-dl">
+            <!-- {#each chatUserList as chatUser} -->
+            {#each [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9] as num}
+              <DmList />
+            {/each}
+            <!-- <DmList chatUser={chatUser}/> -->
+            <!-- {/each} -->
+          </dl>
+        </div>
+        <div>
+          <footer class="card-footer fixed bottom-0 w-full">(footer)</footer>
+        </div>
+      </div>
+    
     {/if}
   </svelte:fragment>
 </TabGroup>
@@ -93,6 +113,6 @@ let tabSet: number = 0;
   </h1>
   <div slot="trail" class="flex items-center space-x-6">
     <!-- 아바타, 친구목록 -->
-    <Avatar src={userInfo.avatar} on:click={ () => {goProfile(userInfo.id)}} width="w-8" rounded="rounded-full" style="cursor: pointer;" />    <button type="button" class="btn btn-sm variant-filled" on:click={openDrawer}>동무 목록</button>
+    <Avatar src={userInfo.avatar} on:click={ () => {goProfile(userInfo.id)}} width="w-8" rounded="rounded-full" style="cursor: pointer;" />    <button type="button" class="btn btn-sm variant-filled" on:click={openDrawer}>동무 | 목록</button>
   </div>
 </AppBar>
