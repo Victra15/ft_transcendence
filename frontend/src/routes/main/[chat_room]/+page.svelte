@@ -5,7 +5,8 @@
 	import type { Socket } from 'socket.io-client';
 	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import type { ChatAuthDTO, ChatMsgIF, ChatUserIF, PayLoadIF } from '$lib/interface';
+	import type { ChatAuthDTO, ChatMsgIF, ChatRoomIF, ChatUserIF, RoomCheckIF } from '$lib/interface';
+	import { popup } from '@skeletonlabs/skeleton';
 	import type { PopupSettings } from '@skeletonlabs/skeleton';
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
@@ -17,29 +18,39 @@
 
 	let socket: Socket;
 	let userid: string
-	let room : ChatRoomInfo;
+	let room : ChatRoomIF;
 
 	const unsubscribe = socketStore.subscribe((_socket: Socket) => {
 		socket = _socket;
 	});
 
 	onMount(() => {
+		if (socket === undefined)
+			goto("/main");
 		userid = socket.io.engine.transport.query["_userId"];
 		/* ===== chat-connect ===== */
-		socket.on('chat-connect', (data: PayLoadIF) => {
-			if (!data._check) console.log('PayLoad false');
-			// or popup 잘못된 접근입니다 확인 => goto (/main);
-			
-		});
 		chat_data._room_name = $page.params['chat_room'];
 		
 		socket.emit('chat-connect', { _room: $page.params['chat_room'], _check: true });
-
+		
+		socket.on('chat-connect', (data: RoomCheckIF) => {
+			if (!data._check) {
+				alert("잘못된 접근입니다");
+				goto("/main");
+			}
+		});
+		
 		socket.emit("chat-refresh", $page.params['chat_room']);
 
 		/* ===== chat-refresh ===== */
-		socket.on('chat-refresh', (data: ChatRoomInfo) => {
-			room = data;
+		socket.on('chat-refresh', (data: ChatRoomIF | string) => {
+			if (typeof data === 'object')
+				room = data;
+			else
+			{
+				console.log("chat refresh error");
+				socket.emit("chat-refresh", $page.params['chat_room']);
+			}
 		})
 
 		/* ===== chat-msg-even ===== */
@@ -54,7 +65,10 @@
 		});
 	});
 
-	onDestroy(unsubscribe);
+	onDestroy(() => {
+		unsubscribe();
+		socket.emit('chat-exit-room', chat_data);
+	});
 
 	/* ================================================================================
 									chat msg
@@ -81,7 +95,6 @@
 	}
 
 	function ft_exit_chat_room() {
-		socket.emit('chat-exit-room', chat_data);
 		goto('/main');
 	}
 
