@@ -1,15 +1,16 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
     import { authToken } from '../../../../service/store';
     import { page } from '$app/stores';
 	import music from "./great_short_music.mp3";
 
     const id = $page.params.id;
-    let position = 80;
+    let position = 60;
     let isScrolling = false;
 
     async function goMain() {
+		audio.pause();
         await authToken.login(id);
         goto('/main');
     }
@@ -19,7 +20,7 @@
 		audio.play();
 
         const interval = setInterval(() => {
-            position -= 0.25;
+            position -= 0.2;
         }, 40);
 
 		setTimeout(async () => {
@@ -40,7 +41,12 @@
                 goMain();
             }
         });
+		onDestroy(() => {
+			audio.pause();
+		});
     });
+
+
 </script>
 
 <style>
@@ -66,7 +72,7 @@
         transform-origin: 50% 100%;
         transform-style: preserve-3d;
         white-space: pre;
-        font-size: 16vmin;
+        font-size: 18vmin;
         text-align: center;
         line-height: 3;
         will-change: transform;
@@ -114,7 +120,7 @@
         style={`transform: rotateX(30deg) translateY(${position}%)`}
  >
 :)
-저희 웹사이트를 방문해 주셔서 감사드립니다.
+JVT를 방문해 주셔서 감사드립니다.
 우선, 이 사이트가 주는 이색적이고 독특한 경험에 당황하실 수도 있겠지만,
 이것이 바로 저희가 의도한 바입니다.
 저희의 디자인 철학이 이해가 가지 않는다면,
@@ -132,7 +138,7 @@
 포스트모더니즘은 전통적인 가치와 체계를 해체하고,
 관점의 다양성을 중요시하며,
 기존의 패턴이나 논리를 부정합니다.
-저희 웹사이트의 디자인은 바로 이 포스트모더니즘적 접근법을 반영한 것입니다.
+JVT의 디자인은 바로 이 포스트모더니즘적 접근법을 반영한 것입니다.
 
 21세기는 디지털 시대로,
 인터넷은 더 이상 단순한 정보 공유 수단이 아닙니다.
@@ -142,12 +148,12 @@
 이용자가 흔히 경험하는 사용성 패턴을 비꼬는 동시에,
 이용자 스스로의 창의적인 해석과 탐색을 요구합니다.
 
-당혹스러워하지 마시고, 저희 웹사이트를 자유롭게 탐험해 보세요.
+당혹스러워하지 마시고, JVT를 자유롭게 탐험해 보세요.
 이는 여러분 스스로의 해석과 경험을 통해
 새로운 가치와 의미를 찾아가는 여정일 것입니다.
 여러분의 독특한 경험과 생각을 자유롭게 표현하고 공유하실 수 있기를 바랍니다.
-저희 웹사이트는 여러분이 그 주인공이고,
-여러분의 창의력을 통해 이 웹사이트는 새로운 의미를 지속적으로 부여받게 될 것입니다.
+JVT는 여러분이 그 주인공이고,
+여러분의 창의력을 통해 JVT는 새로운 의미를 지속적으로 부여받게 될 것입니다.
 
 감사합니다.
 
