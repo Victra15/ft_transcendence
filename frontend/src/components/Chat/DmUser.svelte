@@ -2,6 +2,7 @@
     import type { DmChatStoreIF } from '$lib/interface';
 
     export let dmChatStore: DmChatStoreIF;
+    export let userInfo: UserDTO;
     // export let userInfo: UserDTO; // 실제로 api요청해서 데이터 가져올때 필요 
     // $: userInfo;
     import ChatUI from "./ChatUI.svelte"
@@ -9,6 +10,8 @@
     import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton';
 	import { goto } from '$app/navigation';
     import { getApi } from '../../service/api';
+
+    const opponent : string = Object.keys(dmChatStore)[0];
 
     /**
      * 실제로 api요청해서 데이터 가져올때 필요 
@@ -57,14 +60,15 @@
 		placement: 'left',
 	};
 
-    function triggerModal() {
+    function ft_dm_chat(dmChatStore :DmChatStoreIF) {
         const modalComponent: ModalComponent = {
             ref: ChatUI,
+            props: {dmChatStore: dmChatStore,
+                    userInfo: userInfo},
         };
 
         const modal: ModalSettings = {
             type: 'component',
-            // Data
             component: modalComponent,
             response: (r: string) => console.log('response:', r),
         };
@@ -74,15 +78,15 @@
 
 </script>
 
-<div class="cursor-pointer hover:variant-glass-surface" on:click={triggerModal} >
+<div class="cursor-pointer hover:variant-glass-surface" on:click={ft_dm_chat(dmChatStore)} >
     <Avatar
-        src={dmChatStore[Object.keys(dmChatStore)[0]]._avatar}
+        src={dmChatStore[opponent]._userInfo.avatar}
         width="w-7"
         rounded="rounded-full"
         />
     <span class="flex-auto">
         <dt>
-            {Object.keys(dmChatStore)[0]}
+            {opponent}
         </dt>
     </span>
 </div>
