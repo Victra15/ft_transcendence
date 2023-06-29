@@ -20,14 +20,8 @@
   // tab
   import { TabGroup, Tab } from '@skeletonlabs/skeleton';
 
-  //DM component
-  import DmUser from '../Chat/DmUser.svelte';
-  // DM dummy
-  import { dmDummyList } from '../Auth/dmDummy';
-
-  // Autocomplete
-  import { Autocomplete } from '@skeletonlabs/skeleton';
-  import type { AutocompleteOption } from '@skeletonlabs/skeleton';
+	import type { DmChatStoreIF, DmUserInfoIF } from '$lib/interface';
+	import DmList from '../Chat/DmList.svelte';
 
   const logout = () => {
     authToken.logout()
@@ -50,9 +44,9 @@
     drawerStore.open();
   };
 
-  let tabSet: numbdmstore
+  let tabSet: number = 0
   const updateFriend = async (): Promise<void> => {
-      if (toggleRefresh)
+    if (toggleRefresh)
     {
       friendList = await getApi({
             path: 'friends/',
@@ -91,6 +85,8 @@
     }
   });
 
+
+
 </script>
 
 <!-- UserLayout.svelte -->
@@ -105,24 +101,10 @@
   <!-- Tab Panels --->
   <svelte:fragment slot="panel">
     {#if tabSet === 0}
-      <div>
-        <header class="card-footer  top-0 w-full">
-          <div class="input-group input-group-divider grid-cols-[auto_1fr_auto]">
-            <input type="search" placeholder="Search..." />
-            <button type="button" class="variant-filled-surface">Add</button>
-          </div>
-        </header>
-        <main>
-          <div class="overflow-y-scroll">
-            <dl class="list-dl">
-              {#each dmDummyList as dmUser}
-                <DmUser dmChatStore={dmUser} userInfo={userInfo}/>
-              {/each}
-            </dl>
-          </div>
-        </main>
-      </div>
+      <!-- To be DM list component -->
+      <DmList userInfo={userInfo} />
     {:else if tabSet === 1}
+      <!-- Friend list -->
         <dl class="list-dl">
           {#each friendList as friend}
             <FriendsList friend={friend} userInfo={userInfo} />
