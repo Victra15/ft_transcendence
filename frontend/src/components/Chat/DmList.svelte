@@ -1,7 +1,7 @@
 <script lang="ts">
   export let userInfo: UserDTO
 
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount } from 'svelte'
 
   import type { DmChatStoreIF, DmUserInfoIF } from '$lib/interface'
   import DmUser from './DmUser.svelte'
@@ -10,15 +10,12 @@
 
   let opponentUserId= ''
   let loadDmChat : string | null
-  $: loadDmChat // OnMount할때 하면 굳이 반응형 변수로 할 필요 없는가?
-  // 컴포넌트가 DOM에 마운트될 때이니 굳이 인가?
   let dmStoreData : DmChatStoreIF = {}
   $: dmStoreData
 
   /**
    * 실제로  dmStoreData[key]._userInfo = curUserInfo 코드가 동작하는지 확인이 필요하다
    * 유저가 프로필이나 닉네임을 바꾸어보고 적용되는지 확인해야한다.
-   * 
    */
   // feat GPT for .. each solution detach from Ojbect
   async function ftUpdateDmList(): Promise<void> {
@@ -44,7 +41,7 @@
           ftUpdateDmList()
         }
       } catch (error) {
-        console.log('DM loading error')
+        return alert('DM list loading error')
       }
   })
 
@@ -78,14 +75,9 @@
         else if (opponentUserId in dmStoreData) { // TODO 이미 추가된 유저인지 확인 필요
           return alert('이미 ' + opponentUserId + '은(는) DM 대상으로 등록되었습니다.')
         }
-        console.log("opponentUserId : " + opponentUserId)
         let searchedUser : UserDTO | null = await getApi({ path: 'user/' + opponentUserId})
         if (typeof searchedUser === "string" || searchedUser === null || searchedUser === undefined)
-        {
-          console.log("searchedUser : ")
-          console.log(searchedUser)
           return alert(opponentUserId + ' user정보 찾을 수 없습니다')
-        }
         let newDmChatStore : DmUserInfoIF = {
             _userInfo: searchedUser,
             _dmChatStore: [],
@@ -113,7 +105,7 @@
         <dl class="list-dl">
           {#if dmStoreData != null}
             {#each Object.entries(dmStoreData) as [key, curDmChatStore]}
-              <DmUser opponent={key} dmUserInfo={curDmChatStore} userInfo={userInfo} />
+              <DmUser opponent={key} dmUserInfo={curDmChatStore} userInfo={userInfo} dmStoreData={dmStoreData} />
             {/each}
           {/if}
         </dl>

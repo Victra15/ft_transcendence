@@ -2,16 +2,15 @@
     export let opponent: string
     export let dmUserInfo: DmUserInfoIF
     export let userInfo: UserDTO
+    export let dmStoreData: DmChatStoreIF
+    
     $: dmUserInfo
 
-    import type { DmUserInfoIF } from '$lib/interface'
+    import type { DmChatStoreIF, DmUserInfoIF } from '$lib/interface'
     import DmChatUI from "./DmChatUI.svelte"
     import { Avatar, modalStore } from '@skeletonlabs/skeleton'
     import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton'
-    // import { getApi } from '../../service/api'
     
-    // To check 데이터구조 한 칸 더 안으로 들어갔으므로 제대로 key값을 가져오는지 확인 필요.
-
     /**
      * 실제로 api요청해서 데이터 가져올때 필요 
      * userInfo 최신화시점. DM list tab에서 유저에 의해 click될때.
@@ -56,12 +55,13 @@
             ref: DmChatUI,
             props: {opponent: opponent,
                     dmUserInfo: dmUserInfo,
-                    userInfo: userInfo}
+                    userInfo: userInfo,
+                    dmStoreData: dmStoreData}
         }
 
         const modal: ModalSettings = {
             type: 'component',
-            component: modalComponent,
+            component: modalComponent
             // response: (r: string) => console.log('response:', r),
             /*
                 response로 call back함수를 주어서 
@@ -82,7 +82,6 @@
         rounded="rounded-full"
     />
     <span class="flex-auto">
-        <!-- 프로필에서 변경한 nickname이 잘 적용되는지 확인 필요-->
         <dt>
             {opponent} | {dmUserInfo._userInfo.nickname}
         </dt>
