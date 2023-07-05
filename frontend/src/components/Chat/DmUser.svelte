@@ -1,13 +1,13 @@
 <script lang="ts">
-    export let opponent: string
-    export let dmUserInfo: DmUserInfoIF
-    export let userInfo: UserDTO
-    export let dmStoreData: DmChatStoreIF
-    
     import type { DmChatStoreIF, DmUserInfoIF } from '$lib/interface'
     import DmChatUI from "./DmChatUI.svelte"
     import { Avatar, modalStore } from '@skeletonlabs/skeleton'
     import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton'
+
+    export let opponent: string
+    export let dmUserInfo: DmUserInfoIF
+    export let userInfo: UserDTO
+    export let dmStoreData: DmChatStoreIF
 
     function ftDmChat() {
         const modalComponent: ModalComponent = {
@@ -33,7 +33,6 @@
         rounded="rounded-full"
     />
     <span class="flex-auto">
-        <!-- 프로필에서 변경한 nickname이 잘 적용되는지 확인 필요-->
         <dt>
             {opponent} | {dmUserInfo._userInfo.nickname}
         </dt>
