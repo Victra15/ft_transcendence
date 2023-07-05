@@ -33,7 +33,7 @@
         loadDmChat = localStorage.getItem(DM_KEY)
         if (loadDmChat) {
           dmStoreData = JSON.parse(loadDmChat)
-          ftUpdateDmList()
+          await ftUpdateDmList()
         }
       } catch (error) {
         return alert('DM list loading error')
@@ -49,7 +49,6 @@
       if (curDmStoreData[userId])
         newDmChatStore._dmChatStore = curDmStoreData[userId]._dmChatStore
     }
-    console.log("ftUpdateChatLocalStorage")
     dmStoreData[userId] = newDmChatStore
     localStorage.setItem(DM_KEY, JSON.stringify(dmStoreData))
   }

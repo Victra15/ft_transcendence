@@ -10,10 +10,6 @@
     import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton'
 
     function ftDmChat() {
-        
-        /*
-            update userInfo 
-        */
         const modalComponent: ModalComponent = {
             ref: DmChatUI,
             props: {opponent: opponent,
