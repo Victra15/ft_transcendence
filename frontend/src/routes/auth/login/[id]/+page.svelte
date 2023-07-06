@@ -1,13 +1,14 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
-    import { authToken } from '../../../../service/store';
+    import { auth, authToken } from '../../../../service/store';
     import { page } from '$app/stores';
 	import music from "./great_short_music.mp3";
 
     const id = $page.params.id;
     let position = 60;
     let isScrolling = false;
+    let timer: NodeJS.Timer;
 
     let skip = function(event: KeyboardEvent) {
         if (event.code === 'KeyX') {
@@ -19,6 +20,7 @@
 		audio.pause();
         await authToken.login(id);
         window.removeEventListener('keydown', skip);
+        clearTimeout(timer);
         goto('/main');
     }
 
@@ -30,7 +32,7 @@
             position -= 0.2;
         }, 40);
 
-		setTimeout(async () => {
+		timer = setTimeout(async () => {
             goMain();
         }, 28000);
         // Set an interval to remove itself
@@ -38,7 +40,20 @@
     }
 
 	let audio: HTMLAudioElement;
-    onMount(() => {
+    let userInfo: UserDTO;
+    let isLoading: boolean = true;
+    onMount(async () => {
+            try {
+              userInfo = await auth.isLogin();
+              if (userInfo) {
+                goto('/main');
+              }
+              else {
+                isLoading = false;
+              }
+          }catch
+          {
+          }
 		audio = new Audio(music);
 
         window.addEventListener('keydown', skip);
@@ -75,39 +90,41 @@
         will-change: transform;
     }
 </style>
+{#if isLoading === false}
 
 <div class="h-screen flex flex-col items-center justify-center">
     {#if !isScrolling}
-	<div class="p-4 bg-gray-100 rounded-lg">
+	<div class="p-4 rounded-lg">
 		<h3 class="text-md font-bold mb-2 text-primary-500">제 1조 (약관의 목적)</h3>
 		<p class="mb-4">
 		  본 약관은 "JIM-VS-TRANSCENDENCE"(이하 "JVT") 서비스 이용에 관한 규정을 목적으로 합니다.
-		</p>
+		</p><br>
 		<h3 class="text-md font-bold mb-2 text-primary-500">제 2조 (사용자의 의무)</h3>
 		<p class="mb-4">
 		  사용자는 서비스 이용 시 아무런 실질적인 의무가 없습니다.
-		</p>
+		</p><br>
 		<h3 class="text-md font-bold mb-2 text-primary-500">제 3조 (개인정보 보호)</h3>
 		<p class="mb-4">
 		  사용자가 제공하는 개인정보는 적절히 보호됩니다.
-		</p>
+		</p><br>
 		<h3 class="text-md font-bold mb-2 text-primary-500">제 4조 (서비스 이용)</h3>
 		<p class="mb-4">
 		  사용자는 JVT 서비스를 자유롭게 이용할 수 있습니다.
-		</p>
+		</p><br>
 		<h3 class="text-md font-bold mb-2 text-primary-500">제 5조 (면책)</h3>
 		<p>
 		  JVT는 어떠한 책임도 지지 않습니다.
-		</p>
+		</p><br>
 </div>
 
-		<button type="button" class="btn variant-filled"
+		<button type="button" class="btn variant-filled mt-4"
 		    on:click={() => {
 		        startScrolling();
 		    }}
 		>
             동의
         </button>
+
 
     {/if}
     {#if isScrolling}
@@ -175,3 +192,9 @@ yolee
         </div>
     {/if}
 </div>
+
+
+{/if}
+
+
+
