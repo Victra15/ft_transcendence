@@ -62,20 +62,6 @@ export class ChatGateway
 			if (socket_list.has(userid))
 				socket_list.get(userid).disconnect();
 			socket_list.set(userid, client);
-
-			// if (!socket_list.has(userid))
-			// else // for test in duplicate user
-			// {
-
-			// 	client.emit("same_user", )
-			// 	// let num: number = 0;
-			// 	// while (socket_list.has(userid + "_" + num.toString()))
-			// 	// 	num++;
-			// 	// client.handshake.query._userId = userid + "_" + num.toString();
-			// 	// userid = client.handshake.query._userId;
-			// 	// socket_list.set(userid, client);
-				
-			// }
 		}
 
 		console.log('\x1b[38;5;154m Chat Connection: ', userid, " : ", client.id + "\x1b[0m");
@@ -291,10 +277,10 @@ export class ChatGateway
 
 	/**
 	 * @name ft_chat_set_admin
-	 * @param client 
-	 * @param payload 
+	 * @param client
+	 * @param payload
 	 * @emits client => "chat-set-admin"
-	 * @returns 
+	 * @returns
 	 */
 	@SubscribeMessage("chat-set-admin")
 	ft_chat_set_admin(
@@ -577,6 +563,7 @@ export class ChatGateway
 				_ban_user: channel._ban_user,
 			}
 			client.emit('chat-refresh', channelSendDTO);
+			client.emit('chat-self-update', channel._users.get(client.handshake.query._userId as string));
 		}
 		else
 			client.emit('chat-refresh', 'chat refresh error!')
@@ -612,9 +599,13 @@ export class ChatGateway
 		@MessageBody() payload: RoomCheckDTO,
 	) {
 		console.log("\x1b[38;5;226m ft_chat_connect \x1b[0m :");
-		if (!this.server.adapter.rooms.has(payload._room)) {
-			// console.log("\x1b[38;5;196m Error :: \x1b[0m chat-connect url is not enable");
+		if (!this.server.adapter.rooms.has(payload._room)
+			|| !channel_list.get(payload._room)._users.get(client.handshake.query._userId as string)
+			) {
+			console.log("\x1b[38;5;196m Error :: \x1b[0m chat-connect url is not enable");
 			payload._check = false;
+			client.emit('chat-connect', payload);
+			return ;
 		}
 		payload._check = true;
 		const userid: string = client.handshake.query._userId as string;
@@ -638,7 +629,7 @@ export class ChatGateway
 		@MessageBody() payload: ChatMsgDTO,
 	) {
 		const userid: string | string[] = client.handshake.query._userId;
-		console.log("\x1b[38;5;226m chat-msg-event \x1b[0m :", payload._room_name, userid);
+		// console.log("\x1b[38;5;226m chat-msg-event \x1b[0m :", payload._room_name, userid);
 		if (!this.server.adapter.rooms.has(payload._room_name)) {
 			console.log("\x1b[38;5;196m Error :: \x1b[0m chat-connect url is not enable");
 			return;
@@ -703,7 +694,7 @@ export class ChatGateway
 
 	// ================================================================================ //
 	/* =                                                                              =
-									utile                                    
+									utile
 	   =                                                                              = */
 	// ================================================================================ //
 
