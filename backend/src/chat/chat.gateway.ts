@@ -473,8 +473,11 @@ export class ChatGateway
 			&& channel._users.has(user_heritor)) {
 			channel._users.get(user_heritor)._is_muted = true;
 			setTimeout(() => {
-				channel._users.get(user_heritor)._is_muted = false;
-				this.ft_chat_refresh_all(channel);
+				if (channel._users.get(user_heritor))
+				{
+					channel._users.get(user_heritor)._is_muted = false;
+					this.ft_chat_refresh_all(channel);
+				}
 			}, 30000);
 			return (0);
 		}
