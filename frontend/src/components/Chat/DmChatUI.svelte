@@ -4,10 +4,10 @@
     
     // Stores
 	import { modalStore } from '@skeletonlabs/skeleton'
-    import type { DmUserInfoIF, DmChatIF, DmChatStoreIF, ChatMsgIF } from '$lib/interface'
+    import type { DmUserInfoIF, DmChatIF, DmChatStoreIF } from '$lib/interface'
     
     // Socket
-    import { DM_KEY, socketStore } from '$lib/webSocketConnection_chat';
+    import { BlOCKED_USER_KEY, DM_KEY, socketStore } from '$lib/webSocketConnection_chat';
 	import type { Socket } from 'socket.io-client';
 	import { onDestroy } from 'svelte';
 	import type { Unsubscriber } from 'svelte/store';
@@ -30,6 +30,22 @@
         dmDataLoad();
         socket.on("dm-chat", (data: DmChatIF) => {
             try {
+                const loadBlockedFrindList : string | null = localStorage.getItem(BlOCKED_USER_KEY);
+				if (loadBlockedFrindList) {
+                    let m = 1;
+					let blockedFriends : friendDTO[] = JSON.parse(loadBlockedFrindList);
+					blockedFriends.forEach(
+                        (blockedFriend) => {
+                            if (m == 0)
+                            { return ; }
+                            if (blockedFriend.id === data._from) {
+                                return m = 0;
+                            }
+                        }
+                    )
+                    if (m == 0)
+                        return ;
+				}
                 if (data._from === dmUserInfo._userInfo.id)
                     dmUserInfo._dmChatStore = [...dmUserInfo._dmChatStore, data]
                 setTimeout(() => {
@@ -68,7 +84,7 @@
     let elemChat: HTMLElement
     
     function scrollChatBottom(behavior?: ScrollBehavior): void {
-        if (elemChat.scrollHeight)
+        if (elemChat && elemChat.scrollHeight && elemChat.scrollHeight > window.innerHeight)
             elemChat.scrollTo({ top: elemChat.scrollHeight, behavior })
     }
 
