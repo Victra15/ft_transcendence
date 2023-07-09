@@ -1,24 +1,58 @@
 version: "3"
 
+volumes:
+  volume_postgres:
+
+networks:
+  network-transcendence:
+    driver: bridge
+
 services:
 
   postgresql:
     image: postgres
     restart: always
-    container_name: postgresql
     expose:
-      - 6000
-    ports:
-      - "127.0.0.1:6000:5432"
+      - 5432
     env_file:
       - .env
-#     volumes:
-#       - postgresDB:/var/lib/postgresql/data
+    volumes:
+      - volume_postgres:/var/lib/postgresql/data
+    networks:
+      - network-transcendence
 
-# volumes:
-#   postgresDB:
-#     driver_opts:
-#       type: none
-#       o: bind
-#       device: /home/ubuntu/ft_transcendence/data/postgresql
-#     name: postgresDB
+  backend: # nest
+    restart: always
+    build:
+      context: backend
+      dockerfile: Dockerfile
+      args:
+        IMAGE_SAVE_PATH: ${IMAGE_SAVE_PATH?}
+    depends_on:
+      - postgresql
+    env_file:
+      - .env
+    expose:
+      - 3000
+    ports:
+      - 3000:3000
+    command: node dist/main.js
+    networks:
+      - network-transcendence
+      - default
+
+  frontend: # svelte
+    restart: always
+    build: frontend
+    depends_on:
+      - backend
+    expose:
+      - 5173
+    ports:
+      - 5173:5173
+    command: npm run dev
+    environment:
+      VITE_API_URL: ${VITE_API_URL?}
+    networks:
+      - network-transcendence
+      - default
