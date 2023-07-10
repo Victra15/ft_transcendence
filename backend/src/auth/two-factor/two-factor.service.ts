@@ -57,26 +57,15 @@ export class TwoFactorService {
       twoFactorCode,
     );
 
-    console.log(isCodeValidated);
     let token: string;
 
     if (isCodeValidated == true)
       token = await this.tokenServiece.createToken(id);
-    res.cookie('auth_token', token, {
+    res.cookie('authtoken_' + id, token, {
       httpOnly: true,
     });
     res.send(isCodeValidated);
 
     return isCodeValidated;
   }
-
-  // async deleteSecret(userId: string) : Promise<boolean> {
-  //   const user: User = await this.userService.findOne(userId);
-
-  //   user.two_factor = false;
-  //   user.two_factor_secret = "";
-
-  //   this.userService.updateUser(userId, user);
-
-  // }
 }

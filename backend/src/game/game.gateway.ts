@@ -47,9 +47,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		@ConnectedSocket() client: Socket,
 	) {
 		const userid: string | string[] = client.handshake.query._userId;
-		console.log('\x1b[38;5;154m Connection: ', userid, " : ", client.id + "\x1b[0m");
 		if (typeof userid === 'string') {
-			// if (!this.gameUsers.has(userid))
 			if (this.gameUsers.has(userid))
 				this.gameUsers.get(userid).disconnect();
 			this.gameUsers.set(userid, client);
@@ -66,25 +64,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 	private destroyRoom(client: Socket, gameStatus?: boolean) {
 		const curPlayer: GamePlayerData = this.players.find(data => data.socketId === client.id);
 		if (curPlayer) {
-			console.log('destroy player array');
 			const playerIndex: number = this.players.indexOf(curPlayer);
 			this.players.splice(playerIndex, 1);
 		}
 		else {
-			console.log('client id : ', client.id);
 			const destroyedRoom: string = this.roomKey.get(client.id);
-			console.log('destroy room', destroyedRoom);
 
 			if (destroyedRoom) {
 				const room: GameRoom = this.rooms.get(destroyedRoom);
 				const gamePlayerScoreData: GamePlayerScoreData = new GamePlayerScoreData();
-				console.log('destroy room found');
 				clearInterval(room.dataFrame);
 				clearInterval(room.endTimer);
 
+				if (room.isEnd) {
+					this.service.endGame(room);
+					return ;
+				}
+
 				if (room.leftPlayer.socketId === client.id) {
 					// rightPlayer win
-					console.log('rightPlayer win');
 					if (gameStatus === true) {
 						gamePlayerScoreData.player1 = room.leftPlayer.myId;
 						gamePlayerScoreData.player1_score = 0;
@@ -99,7 +97,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 				}
 				else {
 					// leftPlayer Win
-					console.log('leftPlayer win');
 					if (gameStatus === true) {
 						gamePlayerScoreData.player1 = room.leftPlayer.myId;
 						gamePlayerScoreData.player1_score = room.leftPlayer.gameScore;
@@ -117,7 +114,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 	}
 
 	handleDisconnect(client: Socket) {
-		console.log('\x1b[38;5;154m Game Disconnect: ', client.id + "\x1b[0m");
 		this.destroyRoom(client, true);
 	}
 
@@ -175,7 +171,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		@ConnectedSocket() client: Socket,
 		@MessageBody() gameStatus: boolean,
 	) {
-		console.log('============Game Quit=============');
 		this.destroyRoom(client, gameStatus);
 	}
 
@@ -197,11 +192,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		@ConnectedSocket() client: Socket,
 		@MessageBody() opponentPlayer: string,
 	) {
-		console.log('client id:', client.id, client.handshake.query._userId as string);
-		console.log('User', this.gameUsers);
 		let userSocket = this.findGameUserSocket(opponentPlayer);
 		if (userSocket) {
-			console.log(this.server.sockets);
 			userSocket.emit('youGotInvite', client.handshake.query._userId);
 		}
 		else {
@@ -234,7 +226,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		this.roomKey.set(room.leftPlayer.socketId, room.leftPlayer.socketId);
 		this.roomKey.set(room.rightPlayer.socketId, room.leftPlayer.socketId);
 
-		// roomName을 받으면 option창으로 redirect 되도록 채팅팀에 말할 것
 		this.server.to(room.leftPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
 		this.server.to(room.rightPlayer.socketId).emit('roomName', room.leftPlayer.socketId);
 	}
@@ -265,9 +256,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 		@ConnectedSocket() client: Socket,
 	) {
 		let gameRoom: string = this.roomKey.get(client.id);
-		console.log('gameRoom : ', gameRoom);
 		if (!gameRoom) {
-			console.log('cannot find game room in the option page');
 			this.server.to(client.id).emit('gotoMain', );
 		}
 	}
@@ -319,7 +308,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 			this.service.getReady(room, client.id);
 		}
 		else {
-			console.log('no room');
 		}
 	}
 
@@ -334,7 +322,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 			this.service.paddleDown(room, client.id);
 		}
 		else {
-			console.log('No such room');
 		}
 	}
 

@@ -9,11 +9,11 @@ export class TokenGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<any | boolean> {
     try {
       const req: RequestWithUser = await context.switchToHttp().getRequest();
-      //헤더
-      const token = await req.header('authtoken');
-      const login = await req.header('islogin');
-      // const token = await req.cookies['auth_token'];
+      const login: string = await req.header('islogin');
+      const header_id: string = await req.header('userid');
+      const token: string = await req.cookies['authtoken_' + header_id];
       const userId = await this.tokenService.verifyToken(token);
+      if (userId.toString() !== header_id) return false;
       if (!await this.tokenService.verifyLogin(userId.toString(), login)) {
         return false;
       }

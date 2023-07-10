@@ -7,17 +7,14 @@
   export let userInfo: UserDTO ;
   export let friendList: friendDTO[];
 
-  //friendsList component
   import FriendsList from '../Profile/FriendsList.svelte';
 
-  //css
   import { AppBar } from '@skeletonlabs/skeleton';
   import { Avatar } from '@skeletonlabs/skeleton';
   import { Drawer, drawerStore } from '@skeletonlabs/skeleton';
   import { getApi } from '../../service/api';
   import { onMount, onDestroy } from 'svelte';
 
-  // tab
   import { TabGroup, Tab } from '@skeletonlabs/skeleton';
 
 	import DmList from '../Chat/DmList.svelte';
@@ -26,7 +23,6 @@
     authToken.logout()
   };
 
-  //상대경로가 아닌 절대경로 프로필로 이동하도록 설정
   const goProfile = (name: string) => {
     goto('/profile/' + name, { replaceState: true });
   };
@@ -55,13 +51,13 @@
 
   let intervalId: NodeJS.Timer;
 
-  const startInterval = () => {
+  export let startInterval = () => {
     intervalId = setInterval(() => {
     updateFriend();
-    }, 5000);
+    }, 1000);
   };
 
-  const stopInterval = () => {
+  export let stopInterval = () => {
     clearInterval(intervalId);
   };
 
@@ -92,8 +88,7 @@ function handleEnter(e: KeyboardEvent) {
 }
 
 async function doSearch() {
-    console.log(insertUserId)
-    let answer : UserDTO | string; 
+    let answer : UserDTO | string;
     try {
             answer = await getApi({
                      path: 'user/' + insertUserId,
@@ -153,7 +148,7 @@ async function doSearch() {
   <h1 class="h1 text-center -mt-3 col-span-3">
     <!-- 메인 로고 -->
     <span class="text-3xl bg-gradient-to-br from-blue-500 to-cyan-300 bg-clip-text text-transparent box-decoration-clone">
-        <span on:click={goHome} style="cursor: alias;">Jim&nbsp;</span><!--typeof answer === "string" && 
+        <span on:click={goHome} style="cursor: alias;">Jim&nbsp;</span><!--typeof answer === "string" &&
         --><span on:click={goGame} style="cursor: progress;">vs</span><!--
         --><span on:click={goHome} style="cursor: alias;">&nbsp;Transcendence</span>
     </span>
