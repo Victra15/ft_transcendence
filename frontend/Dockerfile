@@ -1,6 +1,8 @@
 FROM node:18.16.1-alpine AS build
 WORKDIR /app
 
+ARG VITE_API_URL
+
 # install dependancy -> node_modules
 RUN mkdir svelte NestJS_Front
 COPY --chown=node:node ./svelte/package*.json ./svelte
